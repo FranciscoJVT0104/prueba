@@ -70,12 +70,25 @@ function renderTable() {
 
     if (originalData.length === 0) return;
 
-    let headers = Object.keys(originalData[0]);
+    // Obtener TODOS los encabezados presentes en cualquier fila
+    const headers = Array.from(
+        originalData.reduce((set, row) => {
+            Object.keys(row).forEach(k => set.add(k));
+            return set;
+        }, new Set())
+    );
+
+    // Crear encabezados
     let headerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
 
-    let rowsHTML = originalData.map(row =>
-        "<tr>" + headers.map(h => `<td>${row[h]}</td>`).join("") + "</tr>"
-    ).join("");
+    // Crear filas
+    let rowsHTML = originalData
+        .map(row =>
+            "<tr>" +
+            headers.map(h => `<td>${row[h] ?? ""}</td>`).join("") +
+            "</tr>"
+        )
+        .join("");
 
     table.innerHTML = headerHTML + rowsHTML;
 }
@@ -143,4 +156,5 @@ function exportContNov() {
     link.download = "CONT_NOV.csv";
     link.click();
 }
+
 
