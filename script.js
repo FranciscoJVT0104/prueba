@@ -101,10 +101,10 @@ function exportRevNov() {
     if (originalData.length === 0) { alert("Sube un archivo primero"); return; }
 
     const output = originalData.map((row, index) => {
-        const informe = `REC-${1500 + index}`;
         const username = row.DNI;
         const password = row.DNI + row.APELLIDOS.charAt(0) + row.NOMBRES.charAt(0);
         const email = row.DNI + "s@actualizar.com";
+
 
         return {
             username,
@@ -114,8 +114,8 @@ function exportRevNov() {
             email,
             city: "LIMA",
             course1: row.CURSO_CORTO,
-            group1: informe,
-            obs: ""
+            group1: row["NUMERO DE INFORME"] || row.INFORME || "",
+            obs: row.OBSERVACION || row.OBS || ""
         };
     });
 
@@ -134,16 +134,15 @@ function exportContNov() {
     if (originalData.length === 0) { alert("Sube un archivo primero"); return; }
 
     const output = originalData.map((row, index) => {
-        const informe = `REC-${1500 + index}`;
 
         return {
             Nombre: "",
-            Apellido: `${row.APELLIDOS} ${row.NOMBRES} ${informe}`,
+            Apellido: `${row.APELLIDOS} ${row.NOMBRES} ${row["NUMERO DE INFORME"] || row.INFORME || ""}`,
             Telefono: row.CELULAR,
             "correo electronico": row.CELULAR + "s@actualizar.com",
             Direccion: "ESTANDAR",
             Cumpleaños: new Date().toLocaleDateString(),
-            Observaciones: informe
+            Observaciones: row["NUMERO DE INFORME"] || row.INFORME || ""
         };
     });
 
@@ -156,5 +155,6 @@ function exportContNov() {
     link.download = "CONT_NOV.csv";
     link.click();
 }
+
 
 
