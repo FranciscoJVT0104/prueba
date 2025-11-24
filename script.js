@@ -38,19 +38,22 @@ document.getElementById("fileInput").addEventListener("change", function(e) {
 
         let json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-        originalData = json.map(row => {
-            const cursoLargo = (row.CURSO || "").toUpperCase();
-            const cursoCorto = cursoMap[cursoLargo] || "N/A";
+       originalData = json.map(row => {
+    const cursoLargo = (row.CURSO || "").toUpperCase();
+    const cursoCorto = cursoMap[cursoLargo] || "N/A";
 
-            return {
-                APELLIDOS: row.APELLIDOS || "",
-                NOMBRES: row.NOMBRES || "",
-                CURSO: row.CURSO || "",
-                CURSO_CORTO: cursoCorto,
-                DNI: row.DNI || "",
-                CELULAR: row.CELULAR || ""
-            };
-        });
+    return {
+        APELLIDOS: row.APELLIDOS || "",
+        NOMBRES: row.NOMBRES || "",
+        CURSO: row.CURSO || "",
+        CURSO_CORTO: cursoCorto,
+        DNI: row.DNI || "",
+        CELULAR: row.CELULAR || "",
+        FECHA: row.FECHA || "",
+        INFORME: row["NUMERO DE INFORME"] || row.INFORME || "",
+        OBSERVACION: row.OBSERVACION || row.OBS || ""
+    };
+});
 
         renderTable();
     };
@@ -140,3 +143,4 @@ function exportContNov() {
     link.download = "CONT_NOV.csv";
     link.click();
 }
+
