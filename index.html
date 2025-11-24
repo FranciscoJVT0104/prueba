@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Procesador Excel NOV</title>
+<link rel="stylesheet" href="styles.css">
+
+<!-- Librería XLSX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<h1>Procesador de Excel - NOV</h1>
+
+<div class="controls">
+    <input type="file" id="fileInput" accept=".xlsx, .xls">
+    <button class="btn" onclick="exportRevNov()">Exportar REV NOV (Excel)</button>
+    <button class="btn" onclick="exportContNov()">Exportar CONT NOV (CSV)</button>
+</div>
+
+<h2>Vista previa</h2>
+<table id="previewTable"></table>
+
+<script src="script.js"></script>
+</body>
+</html>
