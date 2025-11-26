@@ -33,6 +33,7 @@
 
   <div class="controls">
     <input id="fileInput" type="file" accept=".csv" />
+    <div id="dropZone" style="border:2px dashed #0369a1;padding:20px;text-align:center;border-radius:8px;color:#0369a1;cursor:pointer;">Arrastra aquí tu archivo CSV</div>
     <button id="btnLoadTemplate" class="secondary">Cargar plantilla de ejemplo</button>
     <button id="btnAddRow" class="ghost">Agregar fila</button>
     <button id="btnGenerate">Generar y descargar CSV para Moodle</button>
@@ -118,7 +119,19 @@
       container.appendChild(table);
     }
 
-    // Cargar archivo
+    // Drag & Drop
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background = '#e0f2fe'; });
+    dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.style.background = 'transparent'; });
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault(); dropZone.style.background = 'transparent';
+      const file = e.dataTransfer.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => { const rows = parseCSVText(ev.target.result); loadRowsIntoTable(rows); };
+      reader.readAsText(file,'UTF-8');
+    });
+
+    // Cargar archivo por input
     document.getElementById('fileInput').addEventListener('change', function(e){
       const file = e.target.files[0];
       if (!file) return;
