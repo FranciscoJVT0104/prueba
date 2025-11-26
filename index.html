@@ -1,121 +1,216 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Plantilla CSV para Moodle</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            color: #333;
-        }
-        textarea {
-            width: 100%;
-            height: 200px;
-            margin-bottom: 10px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #output {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background-color: #fff;
-            padding: 10px;
-            border: 1px solid #ccc;
-        }
-        a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
-            text-decoration: none;
-        }
-        a:hover {
-            background-color: #218838;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Generador de CSV - Moodle (plantilla -> final)</title>
+  <style>
+    body{font-family:Inter,system-ui,Arial;margin:18px;background:#f7f9fc;color:#111}
+    header{display:flex;align-items:center;gap:12px}
+    h1{font-size:18px;margin:0}
+    textarea{width:100%;height:180px;padding:10px;font-family:monospace;border:1px solid #d0d7de;border-radius:6px}
+    .row{display:flex;gap:12px;margin-top:10px}
+    .col{flex:1}
+    label{display:block;font-size:13px;margin-bottom:6px}
+    button{padding:8px 12px;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer}
+    button.secondary{background:#6b7280}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border:1px solid #e5e7eb;padding:6px;text-align:left;font-size:13px}
+    .controls{display:flex;gap:8px;align-items:center}
+    .small{font-size:13px;color:#374151}
+    .footer{margin-top:12px;font-size:13px;color:#6b7280}
+  </style>
 </head>
 <body>
-    <h1>Generador de Plantilla CSV para Matrícula y Activación en Moodle</h1>
-    <p>Pega el CSV inicial en el área de texto a continuación. El encabezado esperado es: <code>firstname|lastname|CELLPHONE|DNI|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS</code></p>
-    <textarea id="inputCsv" placeholder="Pega aquí el CSV inicial..."></textarea>
-    <button onclick="generateCsv()">Generar CSV Final</button>
-    <div id="output"></div>
-    <a id="downloadLink" style="display: none;" href="#" download="plantilla_moodle.csv">Descargar CSV</a>
+  <header>
+    <h1>Generador CSV para Moodle — Convierte tu plantillla inicial al formato final</h1>
+  </header>
 
-    <script>
-        function generateCsv() {
-            const input = document.getElementById('inputCsv').value.trim();
-            if (!input) {
-                alert('Por favor, pega el CSV inicial.');
-                return;
-            }
+  <p class="small">Pega tus filas (separadas por saltos de línea). El separador de campos puede ser <code>|</code> o <code>,</code>. La primera fila puede ser el encabezado (si la detecta, usará los nombres).</p>
 
-            const lines = input.split('\n');
-            if (lines.length < 2) {
-                alert('El CSV debe tener al menos un encabezado y una fila de datos.');
-                return;
-            }
+  <label for="input">Entrada (ej. tu encabezado inicial + filas):</label>
+  <textarea id="input" placeholder="firstname|lastname|CELLPHONE|DNI|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS
+JULIA MERCEDES|AGUILAR BEAZLEY|919473627|46107147|c1|REC-1542|27/11/2025|00:00|30/11/2025|23:59|30 minutos|1
+..."></textarea>
 
-            const header = lines[0].split('|');
-            const expectedHeader = ['firstname', 'lastname', 'CELLPHONE', 'DNI', 'course1', 'group1', 'fecha de inicio', 'hora de inicio', 'fecha de fin', 'hora de fin', 'duracion de cuestionario', 'INTENTOS'];
-            if (header.length !== expectedHeader.length || !header.every((h, i) => h.toLowerCase() === expectedHeader[i].toLowerCase())) {
-                alert('El encabezado no coincide con el esperado.');
-                return;
-            }
+  <div class="row">
+    <div class="col">
+      <label for="domain">Dominio de email (se usará para crear placeholder de correo):</label>
+      <select id="domain">
+        <option value="actualizar.com">@actualizar.com (recomendado)</option>
+        <option value="gmail.com">@gmail.com</option>
+        <option value="institution.edu">@institution.edu</option>
+      </select>
+    </div>
+    <div style="min-width:220px">
+      <label>Opciones</label>
+      <div class="controls">
+        <label class="small"><input type="checkbox" id="hasHeader" checked> La entrada incluye encabezado</label>
+      </div>
+    </div>
+  </div>
 
-            const outputLines = [];
-            const newHeader = 'username|password|firstname|lastname|email|CELLPHONE|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS';
-            outputLines.push(newHeader);
+  <div style="margin-top:10px;display:flex;gap:8px">
+    <button id="convert">Generar CSV final + vista previa</button>
+    <button id="download" class="secondary" disabled>Descargar CSV</button>
+    <button id="clear" class="secondary">Limpiar</button>
+  </div>
 
-            for (let i = 1; i < lines.length; i++) {
-                const row = lines[i].split('|');
-                if (row.length !== header.length) {
-                    alert(`Fila ${i} no tiene el número correcto de columnas.`);
-                    return;
-                }
+  <div id="previewArea"></div>
 
-                const [firstname, lastname, cellphone, dni, course1, group1, fechaInicio, horaInicio, fechaFin, horaFin, duracion, intentos] = row;
+  <script>
+    // mapeo esperado del encabezado inicial a índices si el usuario no provee encabezado
+    const expectedOrder = [
+      'firstname','lastname','CELLPHONE','DNI','course1','group1','fecha de inicio','hora de inicio','fecha de fin','hora de fin','duracion de cuestionario','INTENTOS'
+    ];
 
-                // Generar username: DNI
-                const username = dni;
+    function parseLines(text){
+      const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+      return lines;
+    }
 
-                // Generar password: DNI + primera letra del 1° apellido + primera letra del 1° nombre
-                const apellido = lastname.split(' ')[0]; // Asumiendo que el primer apellido es el primero
-                const nombre = firstname.split(' ')[0]; // Asumiendo que el primer nombre es el primero
-                const password = dni + apellido.charAt(0).toUpperCase() + nombre.charAt(0).toUpperCase();
+    function splitFields(line){
+      // acepta | o , como separador (prioriza | si existe)
+      if(line.includes('|')) return line.split('|').map(f=>f.trim());
+      return line.split(',').map(f=>f.trim());
+    }
 
-                // Generar email: DNI + "s@actualizar.com"
-                const email = dni + 's@actualizar.com';
+    function buildFinalRow(fields, mapping, domain){
+      // recupera valores según mapping de nombres
+      function get(k){
+        const idx = mapping[k];
+        return typeof idx === 'number' ? (fields[idx] ?? '') : '';
+      }
 
-                // Nueva fila
-                const newRow = [username, password, firstname, lastname, email, cellphone, course1, group1, fechaInicio, horaInicio, fechaFin, horaFin, duracion, intentos].join('|');
-                outputLines.push(newRow);
-            }
+      const firstname = get('firstname') || '';
+      const lastname = get('lastname') || '';
+      const cellphone = get('CELLPHONE') || '';
+      const dni = get('DNI') || '';
+      const course1 = get('course1') || '';
+      const group1 = get('group1') || '';
+      const fechaInicio = get('fecha de inicio') || get('fecha_de_inicio') || '';
+      const horaInicio = get('hora de inicio') || get('hora_de_inicio') || '';
+      const fechaFin = get('fecha de fin') || get('fecha_de_fin') || '';
+      const horaFin = get('hora de fin') || get('hora_de_fin') || '';
+      const duracion = get('duracion de cuestionario') || get('duracion') || '';
+      const intentos = get('INTENTOS') || '';
 
-            const outputCsv = outputLines.join('\n');
-            document.getElementById('output').textContent = outputCsv;
+      // username = DNI
+      const username = dni;
+      // password = DNI + primera letra del 1er apellido + primera letra del 1er nombre
+      // asumimos que `lastname` tiene apellidos completos (puede tener espacios)
+      const apellido1 = (lastname.split(' ')[0] || '').replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g,'');
+      const nombre1 = (firstname.split(' ')[0] || '').replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g,'');
+      const pLetraA = apellido1.charAt(0).toUpperCase() || '';
+      const pLetraN = nombre1.charAt(0).toUpperCase() || '';
+      const password = (dni || '') + pLetraA + pLetraN;
 
-            // Crear enlace de descarga
-            const blob = new Blob([outputCsv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const downloadLink = document.getElementById('downloadLink');
-            downloadLink.href = url;
-            downloadLink.style.display = 'inline-block';
+      const email = dni ? `${dni}s@${domain}` : '';
+
+      return [username,password,firstname,lastname,email,cellphone,course1,group1,fechaInicio,horaInicio,fechaFin,horaFin,duracion,intentos];
+    }
+
+    function detectHeaderFields(headerFields){
+      // normaliza nombres a minúsculas y quita caracteres especiales para comparar
+      const clean = s => s.trim().toLowerCase().replace(/[_\-]/g,' ').replace(/\s+/g,' ').normalize('NFD').replace(/[̀-ͯ]/g,'');
+      const mapping = {};
+      headerFields.forEach((h,i)=>{
+        const c = clean(h);
+        // varios alias
+        if(['firstname','first name','nombre','nombres'].includes(c)) mapping['firstname']=i;
+        else if(['lastname','last name','apellido','apellidos'].includes(c)) mapping['lastname']=i;
+        else if(['cellphone','telefono','celular','celphone','cel'].includes(c)) mapping['CELLPHONE']=i;
+        else if(['dni','documento','documento de identidad','id'].includes(c)) mapping['DNI']=i;
+        else if(['course1','curso','course'].includes(c)) mapping['course1']=i;
+        else if(['group1','group','grupo'].includes(c)) mapping['group1']=i;
+        else if(c.includes('fecha') && c.includes('inicio')) mapping['fecha de inicio']=i;
+        else if(c.includes('hora') && c.includes('inicio')) mapping['hora de inicio']=i;
+        else if(c.includes('fecha') && c.includes('fin')) mapping['fecha de fin']=i;
+        else if(c.includes('hora') && c.includes('fin')) mapping['hora de fin']=i;
+        else if(c.includes('duracion')) mapping['duracion de cuestionario']=i;
+        else if(c.includes('intento') || c.includes('intentos')) mapping['INTENTOS']=i;
+      });
+      return mapping;
+    }
+
+    document.getElementById('convert').addEventListener('click', ()=>{
+      const raw = document.getElementById('input').value;
+      const useHeader = document.getElementById('hasHeader').checked;
+      const domain = document.getElementById('domain').value;
+      const previewArea = document.getElementById('previewArea');
+      previewArea.innerHTML = '';
+      if(!raw.trim()){ previewArea.innerHTML = '<p class="small">Pega tus datos primero.</p>'; return; }
+
+      const lines = parseLines(raw);
+      let headerFields = null;
+      let dataLines = lines.slice();
+      if(useHeader){ headerFields = splitFields(lines[0]); dataLines = lines.slice(1); }
+
+      let mapping = {};
+      if(headerFields){ mapping = detectHeaderFields(headerFields); }
+      else{
+        // construir mapping por posición según expectedOrder
+        expectedOrder.forEach((key,i)=> mapping[key]=i);
+      }
+
+      // if some keys missing and no header, assume order
+      // build output rows
+      const outRows = [];
+      outRows.push(['username','password','firstname','lastname','email','CELLPHONE','course1','group1','fecha de inicio','hora de inicio','fecha de fin','hora de fin','duracion de cuestionario','INTENTOS']);
+
+      dataLines.forEach(line=>{
+        const fields = splitFields(line);
+        // if there was no header but number of fields matches expectedOrder length, build mapping positions
+        if(!headerFields && fields.length >= expectedOrder.length){
+          const mm = {};
+          expectedOrder.forEach((k,i)=> mm[k]=i);
+          const final = buildFinalRow(fields, mm, domain);
+          outRows.push(final);
+        } else {
+          const final = buildFinalRow(fields, mapping, domain);
+          outRows.push(final);
         }
-    </script>
+      });
+
+      // mostrar vista previa
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      outRows[0].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+      thead.appendChild(trh);
+      table.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      outRows.slice(1,101).forEach(r=>{ const tr=document.createElement('tr'); r.forEach(c=>{ const td=document.createElement('td'); td.textContent=c; tr.appendChild(td); }); tbody.appendChild(tr); });
+      table.appendChild(tbody);
+      previewArea.appendChild(table);
+
+      // habilitar descarga
+      const csvContent = outRows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join('|')).join('\n');
+      const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const dl = document.getElementById('download');
+      dl.disabled = false;
+      dl.onclick = ()=>{
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'moodle_matricula_transformada.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      };
+
+    });
+
+    document.getElementById('clear').addEventListener('click', ()=>{
+      document.getElementById('input').value='';
+      document.getElementById('previewArea').innerHTML='';
+      document.getElementById('download').disabled = true;
+    });
+
+    // ejemplo rápido cargado en el textarea para que el usuario lo pruebe
+    document.getElementById('input').value = `firstname|lastname|CELLPHONE|DNI|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS
+JULIA MERCEDES|AGUILAR BEAZLEY|919473627|46107147|c1|REC-1542|27/11/2025|00:00|30/11/2025|23:59|30 minutos|1
+TRAICI CAMILA|SALVADOR HUAMANI|924173331|75376908|c2|REC-1540|26/11/2025|00:00|29/11/2025|23:59|30 minutos|2`;
+  </script>
 </body>
 </html>
