@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Plantilla CSV para Moodle</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background-color: #fff;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        a {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+        }
+        a:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>Generador de Plantilla CSV para Matrícula y Activación en Moodle</h1>
+    <p>Pega el CSV inicial en el área de texto a continuación. El encabezado esperado es: <code>firstname|lastname|CELLPHONE|DNI|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS</code></p>
+    <textarea id="inputCsv" placeholder="Pega aquí el CSV inicial..."></textarea>
+    <button onclick="generateCsv()">Generar CSV Final</button>
+    <div id="output"></div>
+    <a id="downloadLink" style="display: none;" href="#" download="plantilla_moodle.csv">Descargar CSV</a>
+
+    <script>
+        function generateCsv() {
+            const input = document.getElementById('inputCsv').value.trim();
+            if (!input) {
+                alert('Por favor, pega el CSV inicial.');
+                return;
+            }
+
+            const lines = input.split('\n');
+            if (lines.length < 2) {
+                alert('El CSV debe tener al menos un encabezado y una fila de datos.');
+                return;
+            }
+
+            const header = lines[0].split('|');
+            const expectedHeader = ['firstname', 'lastname', 'CELLPHONE', 'DNI', 'course1', 'group1', 'fecha de inicio', 'hora de inicio', 'fecha de fin', 'hora de fin', 'duracion de cuestionario', 'INTENTOS'];
+            if (header.length !== expectedHeader.length || !header.every((h, i) => h.toLowerCase() === expectedHeader[i].toLowerCase())) {
+                alert('El encabezado no coincide con el esperado.');
+                return;
+            }
+
+            const outputLines = [];
+            const newHeader = 'username|password|firstname|lastname|email|CELLPHONE|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS';
+            outputLines.push(newHeader);
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split('|');
+                if (row.length !== header.length) {
+                    alert(`Fila ${i} no tiene el número correcto de columnas.`);
+                    return;
+                }
+
+                const [firstname, lastname, cellphone, dni, course1, group1, fechaInicio, horaInicio, fechaFin, horaFin, duracion, intentos] = row;
+
+                // Generar username: DNI
+                const username = dni;
+
+                // Generar password: DNI + primera letra del 1° apellido + primera letra del 1° nombre
+                const apellido = lastname.split(' ')[0]; // Asumiendo que el primer apellido es el primero
+                const nombre = firstname.split(' ')[0]; // Asumiendo que el primer nombre es el primero
+                const password = dni + apellido.charAt(0).toUpperCase() + nombre.charAt(0).toUpperCase();
+
+                // Generar email: DNI + "s@actualizar.com"
+                const email = dni + 's@actualizar.com';
+
+                // Nueva fila
+                const newRow = [username, password, firstname, lastname, email, cellphone, course1, group1, fechaInicio, horaInicio, fechaFin, horaFin, duracion, intentos].join('|');
+                outputLines.push(newRow);
+            }
+
+            const outputCsv = outputLines.join('\n');
+            document.getElementById('output').textContent = outputCsv;
+
+            // Crear enlace de descarga
+            const blob = new Blob([outputCsv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = url;
+            downloadLink.style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>
