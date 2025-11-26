@@ -3,214 +3,201 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Generador de CSV - Moodle (plantilla -> final)</title>
+  <title>Generador de plantilla CSV para Moodle</title>
   <style>
-    body{font-family:Inter,system-ui,Arial;margin:18px;background:#f7f9fc;color:#111}
-    header{display:flex;align-items:center;gap:12px}
-    h1{font-size:18px;margin:0}
-    textarea{width:100%;height:180px;padding:10px;font-family:monospace;border:1px solid #d0d7de;border-radius:6px}
-    .row{display:flex;gap:12px;margin-top:10px}
-    .col{flex:1}
-    label{display:block;font-size:13px;margin-bottom:6px}
-    button{padding:8px 12px;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer}
-    button.secondary{background:#6b7280}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{border:1px solid #e5e7eb;padding:6px;text-align:left;font-size:13px}
-    .controls{display:flex;gap:8px;align-items:center}
-    .small{font-size:13px;color:#374151}
-    .footer{margin-top:12px;font-size:13px;color:#6b7280}
+    :root{font-family:Inter,Arial,Helvetica,sans-serif;color:#1f2937}
+    body{max-width:1000px;margin:24px auto;padding:18px}
+    h1{font-size:20px;margin-bottom:6px}
+    p.lead{margin-top:0;color:#374151}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    input[type=file]{padding:6px}
+    button{background:#0369a1;color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+    button.secondary{background:#64748b}
+    button.ghost{background:transparent;color:#0369a1;border:1px solid #cbd5e1}
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+    th,td{border:1px solid #e2e8f0;padding:8px;text-align:left}
+    th{background:#f1f5f9}
+    td[contenteditable]{background:#fbfdff}
+    .small{font-size:13px;color:#475569}
+    .footer{margin-top:12px;color:#475569;font-size:13px}
+    .row-actions{display:flex;gap:6px}
+    .danger{background:#ef4444}
+    label.inline{display:flex;gap:6px;align-items:center}
+    .note{background:#f8fafc;border-left:4px solid #cbd5e1;padding:8px;margin:8px 0}
+    .kbd{background:#efefef;border-radius:4px;padding:2px 6px;font-family:monospace}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Generador CSV para Moodle — Convierte tu plantillla inicial al formato final</h1>
-  </header>
+  <h1>Generador de CSV para matricular y activar cuestionarios en Moodle</h1>
+  <p class="lead">Carga tu CSV inicial (separador <span class="kbd">|</span> o <span class="kbd">;</span>), edítalo si hace falta y genera la plantilla final en formato <span class="kbd">|</span> lista para importar a Moodle.</p>
 
-  <p class="small">Pega tus filas (separadas por saltos de línea). El separador de campos puede ser <code>|</code> o <code>,</code>. La primera fila puede ser el encabezado (si la detecta, usará los nombres).</p>
-
-  <label for="input">Entrada (ej. tu encabezado inicial + filas):</label>
-  <textarea id="input" placeholder="firstname|lastname|CELLPHONE|DNI|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS
-JULIA MERCEDES|AGUILAR BEAZLEY|919473627|46107147|c1|REC-1542|27/11/2025|00:00|30/11/2025|23:59|30 minutos|1
-..."></textarea>
-
-  <div class="row">
-    <div class="col">
-      <label for="domain">Dominio de email (se usará para crear placeholder de correo):</label>
-      <select id="domain">
-        <option value="actualizar.com">@actualizar.com (recomendado)</option>
-        <option value="gmail.com">@gmail.com</option>
-        <option value="institution.edu">@institution.edu</option>
-      </select>
-    </div>
-    <div style="min-width:220px">
-      <label>Opciones</label>
-      <div class="controls">
-        <label class="small"><input type="checkbox" id="hasHeader" checked> La entrada incluye encabezado</label>
-      </div>
-    </div>
+  <div class="controls">
+    <input id="fileInput" type="file" accept=".csv" />
+    <button id="btnLoadTemplate" class="secondary">Cargar plantilla de ejemplo</button>
+    <button id="btnAddRow" class="ghost">Agregar fila</button>
+    <button id="btnGenerate">Generar y descargar CSV para Moodle</button>
+    <button id="btnClear" class="secondary">Limpiar tabla</button>
   </div>
 
-  <div style="margin-top:10px;display:flex;gap:8px">
-    <button id="convert">Generar CSV final + vista previa</button>
-    <button id="download" class="secondary" disabled>Descargar CSV</button>
-    <button id="clear" class="secondary">Limpiar</button>
+  <div class="note">
+    <strong>Encabezado esperado (entrada):</strong>
+    <div class="small">firstname | lastname | CELLPHONE | DNI | course1 | group1 | fecha de inicio | hora de inicio | fecha de fin | hora de fin | duracion de cuestionario | INTENTOS</div>
+    <div class="small" style="margin-top:6px">Salida generada: <span class="kbd">username|password|firstname|lastname|email|CELLPHONE|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS</span></div>
   </div>
 
-  <div id="previewArea"></div>
+  <div id="tableContainer"></div>
+
+  <div class="footer">
+    <p class="small">Reglas aplicadas:</p>
+    <ul class="small">
+      <li>username = DNI</li>
+      <li>password = DNI + (primera letra del primer apellido) + (primera letra del primer nombre), en mayúsculas</li>
+      <li>email = DNI + "s@actualizar.com"</li>
+    </ul>
+  </div>
 
   <script>
-    // mapeo esperado del encabezado inicial a índices si el usuario no provee encabezado
-    const expectedOrder = [
-      'firstname','lastname','CELLPHONE','DNI','course1','group1','fecha de inicio','hora de inicio','fecha de fin','hora de fin','duracion de cuestionario','INTENTOS'
-    ];
-
-    function parseLines(text){
-      const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
-      return lines;
-    }
-
-    function splitFields(line){
-      // acepta | o , como separador (prioriza | si existe)
-      if(line.includes('|')) return line.split('|').map(f=>f.trim());
-      return line.split(',').map(f=>f.trim());
-    }
-
-    function buildFinalRow(fields, mapping, domain){
-      // recupera valores según mapping de nombres
-      function get(k){
-        const idx = mapping[k];
-        return typeof idx === 'number' ? (fields[idx] ?? '') : '';
-      }
-
-      const firstname = get('firstname') || '';
-      const lastname = get('lastname') || '';
-      const cellphone = get('CELLPHONE') || '';
-      const dni = get('DNI') || '';
-      const course1 = get('course1') || '';
-      const group1 = get('group1') || '';
-      const fechaInicio = get('fecha de inicio') || get('fecha_de_inicio') || '';
-      const horaInicio = get('hora de inicio') || get('hora_de_inicio') || '';
-      const fechaFin = get('fecha de fin') || get('fecha_de_fin') || '';
-      const horaFin = get('hora de fin') || get('hora_de_fin') || '';
-      const duracion = get('duracion de cuestionario') || get('duracion') || '';
-      const intentos = get('INTENTOS') || '';
-
-      // username = DNI
-      const username = dni;
-      // password = DNI + primera letra del 1er apellido + primera letra del 1er nombre
-      // asumimos que `lastname` tiene apellidos completos (puede tener espacios)
-      const apellido1 = (lastname.split(' ')[0] || '').replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g,'');
-      const nombre1 = (firstname.split(' ')[0] || '').replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g,'');
-      const pLetraA = apellido1.charAt(0).toUpperCase() || '';
-      const pLetraN = nombre1.charAt(0).toUpperCase() || '';
-      const password = (dni || '') + pLetraA + pLetraN;
-
-      const email = dni ? `${dni}s@${domain}` : '';
-
-      return [username,password,firstname,lastname,email,cellphone,course1,group1,fechaInicio,horaInicio,fechaFin,horaFin,duracion,intentos];
-    }
-
-    function detectHeaderFields(headerFields){
-      // normaliza nombres a minúsculas y quita caracteres especiales para comparar
-      const clean = s => s.trim().toLowerCase().replace(/[_\-]/g,' ').replace(/\s+/g,' ').normalize('NFD').replace(/[̀-ͯ]/g,'');
-      const mapping = {};
-      headerFields.forEach((h,i)=>{
-        const c = clean(h);
-        // varios alias
-        if(['firstname','first name','nombre','nombres'].includes(c)) mapping['firstname']=i;
-        else if(['lastname','last name','apellido','apellidos'].includes(c)) mapping['lastname']=i;
-        else if(['cellphone','telefono','celular','celphone','cel'].includes(c)) mapping['CELLPHONE']=i;
-        else if(['dni','documento','documento de identidad','id'].includes(c)) mapping['DNI']=i;
-        else if(['course1','curso','course'].includes(c)) mapping['course1']=i;
-        else if(['group1','group','grupo'].includes(c)) mapping['group1']=i;
-        else if(c.includes('fecha') && c.includes('inicio')) mapping['fecha de inicio']=i;
-        else if(c.includes('hora') && c.includes('inicio')) mapping['hora de inicio']=i;
-        else if(c.includes('fecha') && c.includes('fin')) mapping['fecha de fin']=i;
-        else if(c.includes('hora') && c.includes('fin')) mapping['hora de fin']=i;
-        else if(c.includes('duracion')) mapping['duracion de cuestionario']=i;
-        else if(c.includes('intento') || c.includes('intentos')) mapping['INTENTOS']=i;
-      });
-      return mapping;
-    }
-
-    document.getElementById('convert').addEventListener('click', ()=>{
-      const raw = document.getElementById('input').value;
-      const useHeader = document.getElementById('hasHeader').checked;
-      const domain = document.getElementById('domain').value;
-      const previewArea = document.getElementById('previewArea');
-      previewArea.innerHTML = '';
-      if(!raw.trim()){ previewArea.innerHTML = '<p class="small">Pega tus datos primero.</p>'; return; }
-
-      const lines = parseLines(raw);
-      let headerFields = null;
-      let dataLines = lines.slice();
-      if(useHeader){ headerFields = splitFields(lines[0]); dataLines = lines.slice(1); }
-
-      let mapping = {};
-      if(headerFields){ mapping = detectHeaderFields(headerFields); }
-      else{
-        // construir mapping por posición según expectedOrder
-        expectedOrder.forEach((key,i)=> mapping[key]=i);
-      }
-
-      // if some keys missing and no header, assume order
-      // build output rows
-      const outRows = [];
-      outRows.push(['username','password','firstname','lastname','email','CELLPHONE','course1','group1','fecha de inicio','hora de inicio','fecha de fin','hora de fin','duracion de cuestionario','INTENTOS']);
-
-      dataLines.forEach(line=>{
-        const fields = splitFields(line);
-        // if there was no header but number of fields matches expectedOrder length, build mapping positions
-        if(!headerFields && fields.length >= expectedOrder.length){
-          const mm = {};
-          expectedOrder.forEach((k,i)=> mm[k]=i);
-          const final = buildFinalRow(fields, mm, domain);
-          outRows.push(final);
-        } else {
-          const final = buildFinalRow(fields, mapping, domain);
-          outRows.push(final);
-        }
-      });
-
-      // mostrar vista previa
+    // Utilidades
+    function crearTablaVacia() {
+      const headers = [
+        'firstname','lastname','CELLPHONE','DNI','course1','group1','fecha de inicio','hora de inicio','fecha de fin','hora de fin','duracion de cuestionario','INTENTOS'
+      ];
       const table = document.createElement('table');
+      table.id = 'inputTable';
       const thead = document.createElement('thead');
-      const trh = document.createElement('tr');
-      outRows[0].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
-      thead.appendChild(trh);
+      const tr = document.createElement('tr');
+      headers.forEach(h => { const th=document.createElement('th'); th.innerText=h; tr.appendChild(th); });
+      thead.appendChild(tr);
       table.appendChild(thead);
       const tbody = document.createElement('tbody');
-      outRows.slice(1,101).forEach(r=>{ const tr=document.createElement('tr'); r.forEach(c=>{ const td=document.createElement('td'); td.textContent=c; tr.appendChild(td); }); tbody.appendChild(tr); });
       table.appendChild(tbody);
-      previewArea.appendChild(table);
+      return table;
+    }
 
-      // habilitar descarga
-      const csvContent = outRows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join('|')).join('\n');
-      const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob);
-      const dl = document.getElementById('download');
-      dl.disabled = false;
-      dl.onclick = ()=>{
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'moodle_matricula_transformada.csv';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+    function agregarFilaConDatos(arr) {
+      const table = document.getElementById('inputTable') || (() => { document.getElementById('tableContainer').appendChild(crearTablaVacia()); return document.getElementById('inputTable'); })();
+      const tbody = table.querySelector('tbody');
+      const tr = document.createElement('tr');
+      for (let i=0;i<12;i++){
+        const td = document.createElement('td');
+        td.contentEditable = 'true';
+        td.innerText = arr && arr[i] != null ? arr[i] : '';
+        tr.appendChild(td);
+      }
+      const actionTd = document.createElement('td');
+      actionTd.innerHTML = '<div class="row-actions"><button class="ghost" data-action="up">↑</button><button class="ghost" data-action="down">↓</button><button class="danger" data-action="del">Eliminar</button></div>';
+      tr.appendChild(actionTd);
+      tbody.appendChild(tr);
+    }
+
+    function parseCSVText(text) {
+      // Detect separator: prefer | then ; then ,
+      let sep = '|';
+      if (text.indexOf('|') === -1) sep = text.indexOf(';') !== -1 ? ';' : ',';
+      const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+      const rows = lines.map(line => line.split(sep).map(c=>c.trim()));
+      return rows;
+    }
+
+    function loadRowsIntoTable(rows) {
+      const container = document.getElementById('tableContainer');
+      container.innerHTML = '';
+      const table = crearTablaVacia();
+      const tbody = table.querySelector('tbody');
+      rows.forEach((r,idx)=>{
+        if (idx===0) return; // omit header if provided
+        const tr = document.createElement('tr');
+        for (let i=0;i<12;i++){
+          const td = document.createElement('td'); td.contentEditable='true'; td.innerText = r[i] || ''; tr.appendChild(td);
+        }
+        const actionTd = document.createElement('td');
+        actionTd.innerHTML = '<div class="row-actions"><button class="ghost" data-action="up">↑</button><button class="ghost" data-action="down">↓</button><button class="danger" data-action="del">Eliminar</button></div>';
+        tr.appendChild(actionTd);
+        tbody.appendChild(tr);
+      });
+      container.appendChild(table);
+    }
+
+    // Cargar archivo
+    document.getElementById('fileInput').addEventListener('change', function(e){
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          const rows = parseCSVText(ev.target.result);
+          loadRowsIntoTable(rows);
+        }catch(err){ alert('Error al parsear CSV: '+err.message); }
       };
-
+      reader.readAsText(file,'UTF-8');
     });
 
-    document.getElementById('clear').addEventListener('click', ()=>{
-      document.getElementById('input').value='';
-      document.getElementById('previewArea').innerHTML='';
-      document.getElementById('download').disabled = true;
+    // Ejemplo rápido
+    document.getElementById('btnLoadTemplate').addEventListener('click', function(){
+      const example = `firstname|lastname|CELLPHONE|DNI|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS\nJULIA MERCEDES|AGUILAR BEAZLEY|919473627|46107147|c1|REC-1542|27/11/2025|00:00|30/11/2025|23:59|30 minutos|1\nTRAICI CAMILA|SALVADOR HUAMANI|924173331|75376908|c2|REC-1540|26/11/2025|00:00|29/11/2025|23:59|30 minutos|2`;
+      const rows = parseCSVText(example);
+      loadRowsIntoTable(rows);
     });
 
-    // ejemplo rápido cargado en el textarea para que el usuario lo pruebe
-    document.getElementById('input').value = `firstname|lastname|CELLPHONE|DNI|course1|group1|fecha de inicio|hora de inicio|fecha de fin|hora de fin|duracion de cuestionario|INTENTOS
-JULIA MERCEDES|AGUILAR BEAZLEY|919473627|46107147|c1|REC-1542|27/11/2025|00:00|30/11/2025|23:59|30 minutos|1
-TRAICI CAMILA|SALVADOR HUAMANI|924173331|75376908|c2|REC-1540|26/11/2025|00:00|29/11/2025|23:59|30 minutos|2`;
+    // Agregar fila vacía
+    document.getElementById('btnAddRow').addEventListener('click', function(){ agregarFilaConDatos(); });
+
+    // Delegación acciones de fila (subir, bajar, borrar)
+    document.getElementById('tableContainer').addEventListener('click', function(e){
+      const action = e.target.getAttribute('data-action');
+      if (!action) return;
+      const tr = e.target.closest('tr');
+      if (!tr) return;
+      if (action === 'del') tr.remove();
+      if (action === 'up') { const p = tr.previousElementSibling; if (p) tr.parentNode.insertBefore(tr,p); }
+      if (action === 'down') { const n = tr.nextElementSibling; if (n) tr.parentNode.insertBefore(n,tr); }
+    });
+
+    // Limpiar
+    document.getElementById('btnClear').addEventListener('click', function(){ document.getElementById('tableContainer').innerHTML = ''; });
+
+    // Generar CSV final y descargar (| separated)
+    document.getElementById('btnGenerate').addEventListener('click', function(){
+      const table = document.getElementById('inputTable');
+      if (!table) return alert('No hay datos en la tabla.');
+      const rows = Array.from(table.querySelectorAll('tbody tr')).map(tr=>Array.from(tr.querySelectorAll('td')).slice(0,12).map(td=>td.innerText.trim()));
+      if (rows.length===0) return alert('No hay filas para procesar.');
+
+      const headerOut = ['username','password','firstname','lastname','email','CELLPHONE','course1','group1','fecha de inicio','hora de inicio','fecha de fin','hora de fin','duracion de cuestionario','INTENTOS'];
+
+      const outRows = rows.map(r=>{
+        const firstname = r[0]||'';
+        const lastname = r[1]||'';
+        const cellphone = r[2]||'';
+        const dni = r[3]||'';
+        const course1 = r[4]||'';
+        const group1 = r[5]||'';
+        const fInicio = r[6]||'';
+        const hInicio = r[7]||'';
+        const fFin = r[8]||'';
+        const hFin = r[9]||'';
+        const dur = r[10]||'';
+        const intentos = r[11]||'';
+
+        // obtener primeras letras
+        function primeraLetraPrimerPalabra(t){ if(!t) return ''; const w = t.trim().split(/\s+/)[0]; return w.charAt(0).toUpperCase(); }
+        const pw = String(dni) + primeraLetraPrimerPalabra(lastname) + primeraLetraPrimerPalabra(firstname);
+        const email = String(dni) + 's@actualizar.com';
+
+        return [String(dni), pw.toUpperCase(), firstname, lastname, email, cellphone, course1, group1, fInicio, hInicio, fFin, hFin, dur, intentos];
+      });
+
+      // Construir CSV con BOM y separador |
+      const sep = '|';
+      const lines = [headerOut.join(sep)].concat(outRows.map(r=>r.map(v=>v==null? '': String(v)).join(sep)));
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'MOODLE_IMPORT.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    });
+
+    // Cargar template al inicio para conveniencia
+    // document.getElementById('btnLoadTemplate').click();
   </script>
 </body>
 </html>
